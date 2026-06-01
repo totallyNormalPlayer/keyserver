@@ -7,7 +7,6 @@ app.use(express.json());
 const KEYS_FILE = "./keys.json";
 const EXPIRATION_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-// Load / Save keys
 function loadKeys() {
     try {
         return JSON.parse(fs.readFileSync(KEYS_FILE, "utf8"));
@@ -20,7 +19,6 @@ function saveKeys(keys) {
     fs.writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2));
 }
 
-// Generate Key like: BZ-X7K9-P4M2-Q8VJ
 function generateKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let key = "BZ";
@@ -33,9 +31,16 @@ function generateKey() {
     return key;
 }
 
-// ===================== ROUTES =====================
+// ===================== MAIN PAGE =====================
+app.get("/", (req, res) => {
+    res.send(`
+        <h1>✅ Budokai Z Key System</h1>
+        <p>Server is running correctly.</p>
+        <p><strong>Use /getkey?hwid=xxx</strong> to generate keys.</p>
+    `);
+});
 
-// 1. GET KEY (called after Work.ink)
+// ===================== GET KEY =====================
 app.get("/getkey", (req, res) => {
     const hwid = req.query.hwid;
 
@@ -45,7 +50,6 @@ app.get("/getkey", (req, res) => {
 
     const keys = loadKeys();
 
-    // Check if user already has an active key
     for (const [key, data] of Object.entries(keys)) {
         if (data.hwid === hwid && Date.now() < data.expiresAt) {
             return res.json({
@@ -56,7 +60,6 @@ app.get("/getkey", (req, res) => {
         }
     }
 
-    // Create new key
     const newKey = generateKey();
     
     keys[newKey] = {
@@ -74,7 +77,7 @@ app.get("/getkey", (req, res) => {
     });
 });
 
-// 2. VALIDATE KEY
+// ===================== VALIDATE =====================
 app.get("/validate", (req, res) => {
     const { key, hwid } = req.query;
 
@@ -104,5 +107,5 @@ app.get("/validate", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`✅ Key System Running on Port ${PORT}`);
+    console.log(`✅ Budokai Z Key System Running on Port ${PORT}`);
 });
