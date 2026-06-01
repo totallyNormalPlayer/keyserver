@@ -36,30 +36,32 @@ app.get("/", (req, res) => {
     res.send(`
         <h1>✅ Budokai Z Key System</h1>
         <p>Server is running correctly.</p>
-        <p><strong>Use /getkey?hwid=xxx</strong> to generate keys.</p>
     `);
 });
 
-// ===================== GET KEY =====================
+// ===================== GET KEY (Player Page) =====================
 app.get("/getkey", (req, res) => {
     const hwid = req.query.hwid;
 
     if (!hwid) {
-        return res.status(400).json({ error: "No HWID provided" });
+        return res.send("<h1>Error: No HWID provided</h1>");
     }
 
     const keys = loadKeys();
 
+    // Check for existing key
     for (const [key, data] of Object.entries(keys)) {
         if (data.hwid === hwid && Date.now() < data.expiresAt) {
-            return res.json({
-                success: true,
-                key: key,
-                message: "You already have an active key"
-            });
+            return res.send(`
+                <h1>Your Key</h1>
+                <h2 style="color:green;">${key}</h2>
+                <p>This key is tied to your device and expires in 6 hours.</p>
+                <p><strong>Copy the key above and paste it in Roblox.</strong></p>
+            `);
         }
     }
 
+    // Generate new key
     const newKey = generateKey();
     
     keys[newKey] = {
@@ -70,11 +72,14 @@ app.get("/getkey", (req, res) => {
 
     saveKeys(keys);
 
-    res.json({
-        success: true,
-        key: newKey,
-        expiresIn: "6 hours"
-    });
+    res.send(`
+        <h1>Your Budokai Z Key</h1>
+        <h2 style="color:lime;">${newKey}</h2>
+        <p><strong>Expires in 6 hours</strong></p>
+        <p>Copy this key and paste it back into the Roblox script.</p>
+        <br>
+        <button onclick="navigator.clipboard.writeText('${newKey}')">Copy Key</button>
+    `);
 });
 
 // ===================== VALIDATE =====================
@@ -88,16 +93,12 @@ app.get("/validate", (req, res) => {
     const keys = loadKeys();
     const entry = keys[key];
 
-    if (!entry) {
-        return res.json({ valid: false, reason: "Invalid key" });
-    }
-
+    if (!entry) return res.json({ valid: false, reason: "Invalid key" });
     if (Date.now() > entry.expiresAt) {
         delete keys[key];
         saveKeys(keys);
         return res.json({ valid: false, reason: "Key has expired" });
     }
-
     if (entry.hwid !== hwid) {
         return res.json({ valid: false, reason: "This key belongs to another device" });
     }
@@ -107,5 +108,5 @@ app.get("/validate", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`✅ Budokai Z Key System Running on Port ${PORT}`);
+    console.log(`✅ Budokai Z Key System Running`);
 });
