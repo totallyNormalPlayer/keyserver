@@ -4,10 +4,13 @@ const app = express();
 app.use(express.json());
 
 const KEYS_FILE = "./keys.json";
-const SECRET = "your_secret_here"; // change this, keep it private
 
 function loadKeys() {
-    return JSON.parse(fs.readFileSync(KEYS_FILE, "utf8"));
+    try {
+        return JSON.parse(fs.readFileSync(KEYS_FILE, "utf8"));
+    } catch {
+        return {};
+    }
 }
 
 function saveKeys(keys) {
@@ -23,24 +26,21 @@ function generateKey() {
             key += chars[Math.floor(Math.random() * chars.length)];
         }
     }
-    return key; // e.g. KEY-A1B2-C3D4-E5F6
+    return key;
 }
 
-// Called by your Lua script to get/create a key for a HWID
 app.get("/getkey", (req, res) => {
     const hwid = req.query.hwid;
     if (!hwid) return res.status(400).json({ error: "No HWID provided" });
 
     const keys = loadKeys();
 
-    // Check if HWID already has a key
     for (const [key, data] of Object.entries(keys)) {
         if (data.hwid === hwid) {
             return res.json({ key });
         }
     }
 
-    // Generate new key
     const newKey = generateKey();
     keys[newKey] = { hwid, created: Date.now() };
     saveKeys(keys);
@@ -48,7 +48,6 @@ app.get("/getkey", (req, res) => {
     return res.json({ key: newKey });
 });
 
-// Called by your Lua script to validate a key
 app.get("/validate", (req, res) => {
     const { key, hwid } = req.query;
     if (!key || !hwid) return res.status(400).json({ valid: false });
@@ -63,4 +62,5 @@ app.get("/validate", (req, res) => {
     return res.json({ valid: false });
 });
 
-app.listen(3000, () => console.log("Key server running"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Key server running on port " + PORT));
